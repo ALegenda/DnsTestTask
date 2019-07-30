@@ -44,7 +44,7 @@ namespace DnsTestTask
                 }
             }
 
-            PrintFiles(dirInfo, 0, depth, mode);
+            PrintFiles(dirInfo, 0, depth, mode, true);
         }
 
         private static void PrintHelp()
@@ -54,28 +54,40 @@ namespace DnsTestTask
             Console.WriteLine("Ключ -h или --human-readable для отображения размеров файлов в понятном для человека формате");
         }
 
-        private static void PrintFiles(DirectoryInfo info, int nesting, int maxDepth, Mode mode)
+        private static void PrintFiles(DirectoryInfo info, int nesting, int maxDepth, Mode mode, bool isLast)
         {
             if(maxDepth != -1 && nesting > maxDepth)
                 return;
 
-            Console.WriteLine($"{Indent(nesting)}└───{info.Name}");
+            var files = info.GetFiles();
+            var directories = info.GetDirectories();
 
-            foreach (var fileInfo in info.GetFiles())
+            Console.WriteLine($"{Indent(nesting)}{GetPrefix(isLast)}{info.Name}");
+
+            for (var i = 0; i < files.Length; i++)
             {
-                PrintFileWithMode(fileInfo,nesting+1,mode);
+                PrintFileWithMode(files[i], nesting + 1, mode, IsLastFile(directories.Length, files.Length,i));
             }
 
-            foreach (var directoryInfo in info.GetDirectories())
+            for (var i = 0; i < directories.Length; i++)
             {
-                PrintFiles(directoryInfo, nesting + 1, maxDepth, mode);
+                PrintFiles(directories[i], nesting + 1, maxDepth, mode, directories.Length==i+1);
             }
-
         }
 
-        private static void PrintFileWithMode(FileInfo fileInfo, int nesting, Mode mode)
+        private static string GetPrefix(bool isLast)
         {
-            Console.WriteLine($"{Indent(nesting)}├───{fileInfo.Name} {GetModeLength(mode, fileInfo.Length)}");
+            return isLast ? "└───" : "├───";
+        }
+
+        private static bool IsLastFile(int directoriesLength, int filesLength, int i)
+        {
+            return directoriesLength == 0 && filesLength == i + 1;
+        }
+
+        private static void PrintFileWithMode(FileInfo fileInfo, int nesting, Mode mode, bool isLast)
+        {
+            Console.WriteLine($"{Indent(nesting)}{GetPrefix(isLast)}{fileInfo.Name} {GetModeLength(mode, fileInfo.Length)}");
         }
 
         private static string GetModeLength(Mode mode, long fileInfoLength)
@@ -106,7 +118,17 @@ namespace DnsTestTask
 
         public static string Indent(int count)
         {
-            return "".PadLeft(count * 4);
+            if (count > 1)
+            {
+                var tmp = "".PadLeft(4);
+                for (int i = 1; i < count; i++)
+                    tmp += $"|{"".PadLeft(4)}";
+                return tmp;
+            }
+            else
+            {
+                return "".PadLeft(count * 4);
+            }
         }
     }
 }
